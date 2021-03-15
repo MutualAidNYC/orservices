@@ -10,7 +10,7 @@ RUN npm install
 RUN npm run dev
 
 # Second stage from compatible php version
-FROM php:7.4-fpm-alpine3.13
+FROM php:7.4
 
 # Copy container directory from previous stage
 COPY --from=0 /container .
