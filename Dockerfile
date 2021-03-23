@@ -1,20 +1,21 @@
-# Start from node base image to have access to npm
-FROM node
+FROM php:7-apache
 
-# Create container directory and copy in current directory
-WORKDIR /container
-COPY . /container
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN apt-get update && \
+  apt-get -y install libpng-dev libzip-dev zlib1g-dev && \
+  docker-php-ext-install gd pdo pdo_mysql zip && \
+  apt-get -y remove libpng-dev libzip-dev zlib1g-dev && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
 
-# Set up node dependencies
-RUN npm install
-RUN npm run dev
+COPY . /var/www/
+WORKDIR /var/www
+RUN composer install
 
-# Second stage from compatible php version
-FROM php:7.3
-
-# Copy container directory from previous stage
-COPY --from=0 /container .
-
-# Install composer and get php dependencies
-COPY --from=composer /usr/bin/composer /usr/bin/composer
-RUN composer update
+EXPOSE 8080
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY .env.example /var/www/.env
+RUN chmod 777 -R /var/www/storage/ && \
+    echo "Listen 8080" >> /etc/apache2/ports.conf && \
+    chown -R www-data:www-data /var/www/ && \
+    a2enmod rewrite
